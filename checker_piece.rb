@@ -1,5 +1,4 @@
 class Piece
-	class InvalidMoveError < StandardError; end
 
 	MOVE_OFFSETS = {
 		white: [
@@ -74,7 +73,7 @@ class Piece
 		if valid_move_seq?(move_seq)
 			perform_moves!(move_seq)
 		else
-			raise InvalidMoveError.new
+			raise InvalidMoveError.new("invalid move")
 		end
 	end
 
@@ -95,11 +94,12 @@ class Piece
 
 
 	def move_diffs
-		return validate(MOVE_OFFSETS.values.flatten(1)) if @king
-		validate(MOVE_OFFSETS[@color])
+		offsets = @king ? MOVE_OFFSETS.values.flatten(1) : 
+				MOVE_OFFSETS[@color]
+		valid_moves(offsets)
 	end
 
-	def validate(offsets)
+	def valid_moves(offsets)
 		moves = offsets.map { |move_offset| get_position(move_offset) }
 		moves.select { |move| valid_move?(move) }
 	end
@@ -136,6 +136,15 @@ class Piece
 
 	def remove(pos)
 		@board[pos] = nil
+	end
+
+	def king_check
+		@king = true if in_opponent_crownhead?
+	end
+
+	def in_opponent_crownhead?
+		(@color == :white && @position[0] == 7) || 
+				(@color == :red && @position[0] == 0)
 	end
 
 end

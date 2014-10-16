@@ -1,6 +1,3 @@
-require 'colorize'
-require_relative 'piece'
-
 class CheckerBoard
 
 	attr_reader :board
@@ -87,5 +84,10 @@ class CheckerBoard
   	end
   	duped_board
    end
+
+   def every_piece(color)
+   	@board.flatten.select { |piece| !piece.nil? && piece.color == color }
+   end
+   
 end
 
