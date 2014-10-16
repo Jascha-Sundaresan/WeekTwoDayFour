@@ -1,7 +1,5 @@
-require 'colorize'
-
-
 class Piece
+	class InvalidMoveError < StandardError; end
 
 	MOVE_OFFSETS = {
 		white: [
@@ -44,7 +42,7 @@ class Piece
 	end
 
 	def perform_slide(move)
-		return false unless move_diffs.include?(move)
+		return false unless move_diffs.include?(move) && slide?(move)
 		@board[move] = self
         @board[@position] = nil
 		@position = move
@@ -61,15 +59,49 @@ class Piece
 		true
 	end
 
+	def perform_moves!(move_seq)
+		if move_seq.size == 1
+			move = move_seq[0]
+			raise InvalidMoveError.new unless 
+			        (perform_slide(move) || perform_jump(move))
+		else
+			raise InvalidMoveError.new unless 
+			         move_seq.all? { |move| perform_jump(move) }
+		end
+	end
+
+	def perform_moves(move_seq)
+		if valid_move_seq?(move_seq)
+			perform_moves!(move_seq)
+		else
+			raise InvalidMoveError.new
+		end
+	end
+
+	def valid_move_seq?(move_seq)
+		begin
+			self.dup.perform_moves!(move_seq)
+		rescue InvalidMoveError
+			false
+		else
+			true
+		end
+	end
+
+	def dup
+		Piece.new(@board.dup, @color, @position, @king)
+	end
+
+
+
 	def move_diffs
 		return validate(MOVE_OFFSETS.values.flatten(1)) if @king
-		p MOVE_OFFSETS[@color]
 		validate(MOVE_OFFSETS[@color])
 	end
 
 	def validate(offsets)
-		moves = offsets.map {|move_offset| get_position(move_offset) }
-		moves.select {|move| valid_move?(move)}
+		moves = offsets.map { |move_offset| get_position(move_offset) }
+		moves.select { |move| valid_move?(move) }
 	end
 
 	def get_position(offset)
@@ -96,8 +128,6 @@ class Piece
 		!jumped_space.nil? && jumped_space.color != @color
 	end
 
-
-
 	def jumped_position(move)
 		x, y = @position
 		x2, y2 = move
@@ -108,70 +138,5 @@ class Piece
 		@board[pos] = nil
 	end
 
-end
-
-class CheckerBoard
-
-	STARTING_POSITIONS_WHITE = [
-		[0,1],[0,3],[0,5],[0,7],[1,0],[1,2],
-		[1,4],[1,6],[2,1],[2,3],[2,5],[2,7]
-	]
-
-	STARTING_POSITIONS_RED = [
-		[7,0],[7,2],[7,4],[7,6],[6,1],[6,3],
-		[6,5],[6,7],[5,0],[5,2],[5,4],[5,6]
-	]
-
-	def initialize(populate = true)
-		@board = Array.new(8) { Array.new(8) }
-		populate_board if populate
-	end
-
-	def display_board
-		display_string = ""
-
-		alternate_color = false
-		@board.each do |rows|
-		  rows.each do |space|
-		    if alternate_color
-					display_string << " ".on_black if space.nil?
-					display_string << space.to_s.colorize(space.color)
-								.on_black unless space.nil?
-					display_string << " ".on_black
-				else
-					display_string << "  ".on_white
-				end
-			  alternate_color = !alternate_color
-			end
-		  display_string << "\n"
-		  alternate_color = !alternate_color
-	  end
-	  puts display_string
-
-	end
-
-	def [](position)
-		x,y = position
-		@board[x][y]
-	end
-
-	def []=(position, piece)
-		x,y = position
-		@board[x][y] = piece
-	end
-
-	def populate_board
-		STARTING_POSITIONS_WHITE.each do |pos|
-			self[pos] = Piece.new(self, :white, pos)
-		end
-		STARTING_POSITIONS_RED.each do |pos|
-			self[pos] = Piece.new(self, :red, pos)
-		end
-	end
-
-	
-  def inspect
-    display_board
-  end
 end
 
